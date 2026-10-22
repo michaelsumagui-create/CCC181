@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket #{{ ticket.number }} · RegisTrak{% endblock %}
+
+{% block content %}
+  <h2>Ticket #{{ ticket.number }}</h2>
+  <p>Name: {{ ticket.name }} ({{ ticket.id_number }})</p>
+  <p>Service: {{ service.name if service else "Unknown" }}</p>
+  <p>Status: {{ ticket.status }}</p>
+  <p><a href="{{ url_for('index') }}">&larr; Back to the queue</a></p>
+{% endblock %}
