@@ -39,7 +39,7 @@ def ticket(ticket_id):
 @app.route("/hello")
 def hello():
     # The plain-string version from the Routes slide.
-    return "Hello, CCC181!"
+    return "Hello RegisTrak!"
 
 
 if __name__ == "__main__":
