@@ -3,6 +3,52 @@
 {% block title %}Join the queue · RegisTrak{% endblock %}
 
 {% block content %}
-  <h2>Join the queue</h2>
-  <p>The form is coming in Part 5.</p>
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <h1 class="h3 mb-3">Join the queue</h1>
+
+    <form method="post" action="{{ url_for('join') }}" novalidate>
+
+      <div class="mb-3">
+        <label for="name" class="form-label">Your name</label>
+        <input id="name" name="name" type="text" autocomplete="name" required
+               class="form-control form-control-lg {% if errors.name %}is-invalid{% endif %}"
+               value="{{ form.get('name', '') }}"
+               {% if errors.name %}aria-describedby="name-error"{% endif %}>
+        {% if errors.name %}
+          <div id="name-error" class="invalid-feedback">{{ errors.name }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="id_number" class="form-label">Student ID</label>
+        <input id="id_number" name="id_number" type="text" placeholder="2023-0001" required
+               class="form-control form-control-lg {% if errors.id_number %}is-invalid{% endif %}"
+               value="{{ form.get('id_number', '') }}"
+               {% if errors.id_number %}aria-describedby="id_number-error"{% endif %}>
+        {% if errors.id_number %}
+          <div id="id_number-error" class="invalid-feedback">{{ errors.id_number }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="service_id" class="form-label">Service</label>
+        <select id="service_id" name="service_id" required
+                class="form-select form-select-lg {% if errors.service_id %}is-invalid{% endif %}"
+                {% if errors.service_id %}aria-describedby="service_id-error"{% endif %}>
+          <option value="">Choose a service…</option>
+          {% for s in services %}
+            <option value="{{ s.id }}"
+              {% if form.get('service_id') == s.id|string %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+        {% if errors.service_id %}
+          <div id="service_id-error" class="invalid-feedback">{{ errors.service_id }}</div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg w-100">Join Queue</button>
+    </form>
+  </div>
+</div>
 {% endblock %}
