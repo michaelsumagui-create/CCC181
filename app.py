@@ -4,9 +4,10 @@ Run it with:
     flask --app app run --debug
 then open http://127.0.0.1:5000
 """
-from flask import Flask, render_template, abort
+from flask import Flask, abort, flash, redirect, render_template, request, url_for
 
 app = Flask(__name__)
+app.secret_key = "dev-only-change-me"  # Week 11 moves this into an environment variable
 
 SERVICES = [
     {"id": 1, "name": "Transcript of Records"},
@@ -25,15 +26,24 @@ TICKETS = [
 
 @app.route("/")
 def index():
-    # render_template looks inside the templates/ folder and passes
-    # keyword arguments to the template as variables.
-    return render_template("index.html", tickets=TICKETS, services=SERVICES)
+    return render_template("index.html")
+
+
+@app.route("/join")
+def join_form():
+    return render_template("join.html")
+
+
+@app.route("/staff")
+def staff_dashboard():
+    return "Staff dashboard coming soon"
 
 
 @app.route("/queue/<int:ticket_id>")
 def ticket(ticket_id):
     # Find the ticket with this number, or return a 404 if there isn't one.
     return render_template("ticket.html", ticket_id=ticket_id)
+
 
 
 @app.route("/hello")
