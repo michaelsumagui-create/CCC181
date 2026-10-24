@@ -3,9 +3,99 @@
 {% block title %}Ticket #{{ ticket.number }} · RegisTrak{% endblock %}
 
 {% block content %}
-  <h2>Ticket #{{ ticket.number }}</h2>
-  <p>Name: {{ ticket.name }} ({{ ticket.id_number }})</p>
-  <p>Service: {{ service.name if service else "Unknown" }}</p>
-  <p>Status: {{ ticket.status }}</p>
-  <p><a href="{{ url_for('index') }}">&larr; Back to the queue</a></p>
+<div class="row g-4">
+
+  <div class="col-12 col-lg-7">
+
+    <!-- first thing seen -->
+    <div class="card border-2 border-dark text-center">
+      <div class="card-body py-4">
+        <p class="text-body-secondary mb-0">Your ticket</p>
+        <div class="display-1 fw-bold">R-{{ "%03d"|format(ticket.number) }}</div>
+      </div>
+    </div>
+
+    <div id="live-status" aria-live="polite" class="mt-4">
+
+      {% if ticket.status == "called" %}
+        <div class="alert alert-success fs-5" role="alert">
+          <strong>It's your turn!</strong> Please go to the counter now.
+        </div>
+      {% endif %}
+
+      <!-- Position in line -->
+      {% if ticket.status == "waiting" %}
+        <div class="d-flex align-items-center gap-3">
+          <div class="display-3 fw-bold">{{ position }}</div>
+          <div>
+            <div class="fs-5 fw-semibold">
+              {% if ahead == 0 %}
+                You're next!
+              {% elif ahead == 1 %}
+                1 person ahead of you
+              {% else %}
+                {{ ahead }} people ahead of you
+              {% endif %}
+            </div>
+            <div class="text-body-secondary">~{{ wait }} min estimated wait</div>
+          </div>
+        </div>
+      {% elif ticket.status == "served" %}
+        <p class="fs-4 fw-semibold mb-0">Your request has been served.</p>
+      {% elif ticket.status == "no-show" %}
+        <p class="fs-4 fw-semibold mb-0">This ticket is no longer in the queue.</p>
+      {% endif %}
+
+      <!-- Waiting -> Called -> Served -->
+      <p class="small text-uppercase text-body-secondary mt-4 mb-2">Status</p>
+      {% if ticket.status == "no-show" %}
+        <span class="badge text-bg-danger fs-6 rounded-pill px-3 py-2">No-show</span>
+      {% else %}
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          {% set steps = [("waiting", "Waiting"), ("called", "Called"), ("served", "Served")] %}
+          {% for key, label in steps %}
+            {% if ticket.status == key %}
+              <span class="badge rounded-pill text-bg-dark fs-6 px-3 py-2" aria-current="step">{{ label }}</span>
+            {% else %}
+              <span class="badge rounded-pill border text-body fs-6 px-3 py-2">{{ label }}</span>
+            {% endif %}
+            {% if not loop.last %}<span aria-hidden="true">&rarr;</span>{% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- now serving, service, leave button -->
+  <div class="col-12 col-lg-5">
+    <div class="card">
+      <div class="card-body">
+
+        <p class="small text-uppercase text-body-secondary mb-1">Now serving</p>
+        <p class="h4 mb-3">
+          {% if now_serving %}
+            R-{{ "%03d"|format(now_serving.number) }}
+          {% else %}
+            No one yet
+          {% endif %}
+        </p>
+
+        <p class="small text-uppercase text-body-secondary mb-1">Service</p>
+        <p class="mb-3">{{ service.name }}</p>
+
+        <p class="small text-uppercase text-body-secondary mb-1">Name</p>
+        <p class="mb-0">{{ ticket.name }} ({{ ticket.id_number }})</p>
+
+        {% if ticket.status in ["waiting", "called"] %}
+          <form method="post" action="{{ url_for('leave', ticket_id=ticket.number) }}"
+                class="mt-4"
+                onsubmit="return confirm('Leave the queue? You will lose your place.');">
+            <button type="submit" class="btn btn-outline-dark btn-lg w-100">Leave queue</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

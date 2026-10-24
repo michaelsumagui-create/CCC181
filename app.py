@@ -43,7 +43,6 @@ def join():
     id_number = form.get("id_number", "").strip()
     service_id = form.get("service_id", type=int)
 
-    # 1. Check every field and collect the problems
     errors = {}
     if not name:
         errors["name"] = "Please enter your name."
@@ -54,18 +53,16 @@ def join():
     if service_id not in [s["id"] for s in SERVICES]:
         errors["service_id"] = "Please choose a service."
 
-    # 2. If anything is wrong, show the form again with the messages
     if errors:
         flash("Please fix the highlighted fields.", "danger")
         return render_template("join.html", services=SERVICES, form=form, errors=errors), 400
 
-    # 3. Already in the queue? Send them to their existing ticket
+    # Already in the queue? Send them to their existing ticket
     for t in TICKETS:
         if t["id_number"] == id_number and t["status"] in ("waiting", "called"):
             flash(f"You're already in the queue. Your ticket is #{t['number']}.", "info")
             return redirect(url_for("ticket", ticket_id=t["number"]))
 
-    # 4. Everything is fine, so create the ticket
     number = TICKETS[-1]["number"] + 1 if TICKETS else 1
     TICKETS.append({
         "number": number,
@@ -78,14 +75,36 @@ def join():
     return redirect(url_for("ticket", ticket_id=number))
 
 
-@app.route("/queue/<int:ticket_id>")
+@app.get("/queue/<int:ticket_id>")
 def ticket(ticket_id):
-    # Find the ticket with this number, or 404 if there isn't one
-    found = next((t for t in TICKETS if t["number"] == ticket_id), None)
-    if found is None:
+    # Find the ticket, or show a 404 page if it doesn't exist
+    t = next((t for t in TICKETS if t["number"] == ticket_id), None)
+    if t is None:
         abort(404)
-    service = next((s for s in SERVICES if s["id"] == found["service_id"]), None)
-    return render_template("ticket.html", ticket=found, service=service)
+
+    # Count people still waiting ahead of this ticket, for the same service
+    ahead = [x for x in TICKETS
+             if x["service_id"] == t["service_id"]
+             and x["status"] == "waiting"
+             and x["number"] < t["number"]]
+
+    service = next(s for s in SERVICES if s["id"] == t["service_id"])
+    return render_template("ticket.html", ticket=t, service=service, ahead=len(ahead))
+
+
+@app.post("/queue/<int:ticket_id>/leave")
+def leave(ticket_id):
+    t = next((t for t in TICKETS if t["number"] == ticket_id), None)
+    if t is None:
+        abort(404)
+
+    # Only people still waiting or called can leave
+    if t["status"] in ("waiting", "called"):
+        t["status"] = "no-show"
+        flash("You left the queue.", "info")
+    else:
+        flash("This ticket is already closed.", "warning")
+    return redirect(url_for("index"))
 
 
 @app.route("/staff")
