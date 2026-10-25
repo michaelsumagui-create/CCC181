@@ -25,6 +25,15 @@ TICKETS = [
 ]
 
 
+def ordinal(n):
+    """1 -> 1st, 2 -> 2nd, 3 -> 3rd, 4 -> 4th ..."""
+    if 10 <= n % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -60,7 +69,7 @@ def join():
     # Already in the queue? Send them to their existing ticket
     for t in TICKETS:
         if t["id_number"] == id_number and t["status"] in ("waiting", "called"):
-            flash(f"You're already in the queue. Your ticket is #{t['number']}.", "info")
+            flash(f"You're already in the queue. Your ticket is R-{t['number']:03d}.", "info")
             return redirect(url_for("ticket", ticket_id=t["number"]))
 
     number = TICKETS[-1]["number"] + 1 if TICKETS else 1
@@ -82,14 +91,33 @@ def ticket(ticket_id):
     if t is None:
         abort(404)
 
-    # Count people still waiting ahead of this ticket, for the same service
+    # People still waiting ahead of you, for the same service
     ahead = [x for x in TICKETS
              if x["service_id"] == t["service_id"]
              and x["status"] == "waiting"
              and x["number"] < t["number"]]
 
     service = next(s for s in SERVICES if s["id"] == t["service_id"])
-    return render_template("ticket.html", ticket=t, service=service, ahead=len(ahead))
+
+    # Who is being served right now
+    now_serving = next((x for x in TICKETS if x["status"] == "called"), None)
+
+    # If nobody is called, show the most recently served ticket instead
+    last_served = None
+    if not now_serving:
+        served = [x for x in TICKETS if x["status"] == "served"]
+        last_served = max(served, key=lambda x: x["number"]) if served else None
+
+    return render_template(
+        "ticket.html",
+        ticket=t,
+        service=service,
+        ahead=len(ahead),
+        position=ordinal(len(ahead) + 1),
+        wait=len(ahead) * 4,          # rough guess: 4 minutes per person
+        now_serving=now_serving,
+        last_served=last_served,
+    )
 
 
 @app.get("/queue/<int:ticket_id>/status.json")

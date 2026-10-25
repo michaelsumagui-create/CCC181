@@ -5,12 +5,12 @@
 {% block content %}
 <div class="row g-4">
 
+  <!-- LEFT: ticket number, position, status -->
   <div class="col-12 col-lg-7">
 
-    <!-- first thing seen -->
     <div class="card border-2 border-dark text-center">
       <div class="card-body py-4">
-        <p class="text-body-secondary mb-0">Your ticket</p>
+        <h1 class="h6 text-body-secondary mb-0">Your ticket</h1>
         <div class="display-1 fw-bold">R-{{ "%03d"|format(ticket.number) }}</div>
       </div>
     </div>
@@ -23,7 +23,6 @@
         </div>
       {% endif %}
 
-      <!-- Position in line -->
       {% if ticket.status == "waiting" %}
         <div class="d-flex align-items-center gap-3">
           <div class="display-3 fw-bold">{{ position }}</div>
@@ -46,7 +45,6 @@
         <p class="fs-4 fw-semibold mb-0">This ticket is no longer in the queue.</p>
       {% endif %}
 
-      <!-- Waiting -> Called -> Served -->
       <p class="small text-uppercase text-body-secondary mt-4 mb-2">Status</p>
       {% if ticket.status == "no-show" %}
         <span class="badge text-bg-danger fs-6 rounded-pill px-3 py-2">No-show</span>
@@ -64,20 +62,23 @@
         </div>
       {% endif %}
     </div>
+
     <p id="last-updated" class="small text-body-secondary mt-3" aria-live="polite"></p>
   </div>
 
-  <!-- now serving, service, leave button -->
+  <!-- RIGHT: now serving, service, leave button -->
   <div class="col-12 col-lg-5">
-        <div class="card" id="side-card">
+    <div class="card" id="side-card">
       <div class="card-body">
 
         <p class="small text-uppercase text-body-secondary mb-1">Now serving</p>
         <p class="h4 mb-3">
           {% if now_serving %}
             R-{{ "%03d"|format(now_serving.number) }}
+          {% elif last_served %}
+            Last served: R-{{ "%03d"|format(last_served.number) }}
           {% else %}
-            No one yet
+            Waiting for staff to call the first ticket
           {% endif %}
         </p>
 
