@@ -71,7 +71,7 @@ def join():
         "service_id": service_id,
         "status": "waiting",
     })
-    flash(f"You joined the queue. Your ticket is #{number}.", "success")
+    flash(f"You joined the queue. Your ticket is R-{number:03d}.", "success")
     return redirect(url_for("ticket", ticket_id=number))
 
 
