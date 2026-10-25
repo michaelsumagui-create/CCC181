@@ -8,7 +8,7 @@
 - **Student ID:** 2023-3802
 - **Section:** CS3B
 - **Date:** October 25, 2026
-- **Pull request:** __ (paste the link)
+- **Pull request:** ([#2](https://github.com/michaelsumagui-create/CCC181/pull/2))
 
 ## 2. Personas
 
