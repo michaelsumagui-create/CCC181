@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="text-center py-5">
+    <h2 class="display-5 fw-bold">Welcome to RegisTrak</h2>
+    <p class="lead">Skip the line, secure your time. Join the registrar's queue from your phone and wait wherever you like.</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('join_form') }}">Join the queue</a>
+  </div>
+{% endblock %}

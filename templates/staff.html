@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Queue dashboard · RegisTrak{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4">RegisTrak Staff</h1>
+
+<div class="row g-4">
+
+  <div class="col-12 col-lg-5">
+
+    <form method="post" action="{{ url_for('call_next') }}" class="mb-4">
+      <input type="hidden" name="service_id" value="{{ selected or '' }}">
+      <button type="submit" class="btn btn-dark btn-lg w-100 py-4 fs-2">Call next</button>
+    </form>
+
+    <div class="card border-2 border-dark mb-4">
+      <div class="card-body">
+        <p class="small text-uppercase text-body-secondary mb-1">Now serving</p>
+        {% if now_serving %}
+          <div class="display-3 fw-bold">R-{{ "%03d"|format(now_serving.number) }}</div>
+          <p class="mb-3">{{ now_serving.name }} &middot; {{ names[now_serving.service_id] }}</p>
+
+          <form method="post"
+                action="{{ url_for('staff_action', ticket_id=now_serving.number, action='serve') }}"
+                class="mb-2">
+            <button type="submit" class="btn btn-dark w-100"
+                    aria-label="Mark ticket {{ now_serving.number }} as served">Mark served</button>
+          </form>
+
+          <form method="post"
+                action="{{ url_for('staff_action', ticket_id=now_serving.number, action='no-show') }}"
+                onsubmit="return confirm('Mark this ticket as no-show?');">
+            <button type="submit" class="btn btn-outline-dark w-100"
+                    aria-label="Skip ticket {{ now_serving.number }} as no-show">Skip / no-show</button>
+          </form>
+        {% else %}
+          <p class="fs-5 mb-0">No one is being served. Press <strong>Call next</strong>.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="row g-2 text-center">
+      <div class="col-6">
+        <div class="border rounded p-2">
+          <div class="fs-3 fw-bold">{{ waiting_count }}</div>
+          <div class="small text-body-secondary">waiting</div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="border rounded p-2">
+          <div class="fs-3 fw-bold">{{ served_count }}</div>
+          <div class="small text-body-secondary">served</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <p class="small text-uppercase text-body-secondary mb-1">&#9733; Waiting per service</p>
+      <ul class="list-group">
+        {% for s in services %}
+          <li class="list-group-item d-flex justify-content-between">
+            {{ s.name }}
+            <span class="badge text-bg-dark rounded-pill">{{ waiting_per_service[s.id] }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-7">
+
+    <form method="get" action="{{ url_for('staff_dashboard') }}" class="row g-2 mb-3">
+      <div class="col">
+        <label for="service_id" class="visually-hidden">Filter by service</label>
+        <select id="service_id" name="service_id" class="form-select">
+          <option value="">All services</option>
+          {% for s in services %}
+            <option value="{{ s.id }}" {% if selected == s.id %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-dark">Show</button>
+      </div>
+    </form>
+
+    {% if queue %}
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <caption class="caption-top">Active queue: tickets waiting or being served</caption>
+          <thead>
+            <tr>
+              <th scope="col">Ticket</th>
+              <th scope="col">Name</th>
+              <th scope="col">Service</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in queue %}
+              <tr {% if t.status == "called" %}class="table-success"{% endif %}>
+                <th scope="row">R-{{ "%03d"|format(t.number) }}</th>
+                <td>{{ t.name }}</td>
+                <td>{{ names[t.service_id] }}</td>
+                <td>
+                  {% if t.status == "called" %}
+                    <span class="badge text-bg-success">Called</span>
+                  {% else %}
+                    <span class="badge text-bg-warning">Waiting</span>
+                  {% endif %}
+                </td>
+                <td class="text-nowrap">
+                  {% if t.status == "waiting" %}
+                    <form method="post" class="d-inline"
+                          action="{{ url_for('staff_action', ticket_id=t.number, action='call') }}">
+                      <button class="btn btn-sm btn-primary"
+                              aria-label="Call ticket {{ t.number }}">Call</button>
+                    </form>
+                  {% else %}
+                    <form method="post" class="d-inline"
+                          action="{{ url_for('staff_action', ticket_id=t.number, action='serve') }}">
+                      <button class="btn btn-sm btn-success"
+                              aria-label="Mark ticket {{ t.number }} as served">Serve</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" class="d-inline"
+                        action="{{ url_for('staff_action', ticket_id=t.number, action='no-show') }}"
+                        onsubmit="return confirm('Mark this ticket as no-show?');">
+                    <button class="btn btn-sm btn-outline-danger"
+                            aria-label="Mark ticket {{ t.number }} as no-show">No-show</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-5 border rounded">
+        <p class="fs-4 mb-1">No one is waiting 🎉</p>
+        <p class="text-body-secondary mb-0">New tickets will appear here.</p>
+      </div>
+    {% endif %}
+
+    {% if done %}
+      <div class="table-responsive mt-4">
+        <table class="table table-sm table-secondary text-body-secondary">
+          <caption class="caption-top">Completed requests</caption>
+          <thead>
+            <tr>
+              <th scope="col">Ticket</th>
+              <th scope="col">Name</th>
+              <th scope="col">Service</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in done %}
+              <tr>
+                <th scope="row">R-{{ "%03d"|format(t.number) }}</th>
+                <td>{{ t.name }}</td>
+                <td>{{ names[t.service_id] }}</td>
+                <td>{{ "Served" if t.status == "served" else "No-show" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
