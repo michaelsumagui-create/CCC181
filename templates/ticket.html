@@ -64,11 +64,12 @@
         </div>
       {% endif %}
     </div>
+    <p id="last-updated" class="small text-body-secondary mt-3" aria-live="polite"></p>
   </div>
 
   <!-- now serving, service, leave button -->
   <div class="col-12 col-lg-5">
-    <div class="card">
+        <div class="card" id="side-card">
       <div class="card-body">
 
         <p class="small text-uppercase text-body-secondary mb-1">Now serving</p>
@@ -98,4 +99,48 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const statusUrl = "{{ url_for('ticket_status', ticket_id=ticket.number) }}";
+  const pageUrl = "{{ url_for('ticket', ticket_id=ticket.number) }}";
+  const lastUpdated = document.getElementById("last-updated");
+  let lastData = null;
+
+  async function refreshStatus() {
+    try {
+      // 1. Ask the server for the latest status (small and fast)
+      const res = await fetch(statusUrl);
+      if (!res.ok) throw new Error("Bad response");
+      const data = await res.json();
+      const text = JSON.stringify(data);
+
+      // 2. If something changed, load the page and swap in the fresh parts
+      if (lastData !== null && text !== lastData) {
+        const pageRes = await fetch(pageUrl);
+        if (!pageRes.ok) throw new Error("Bad response");
+        const html = await pageRes.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+
+        for (const id of ["live-status", "side-card"]) {
+          const fresh = doc.getElementById(id);
+          const old = document.getElementById(id);
+          if (fresh && old) old.innerHTML = fresh.innerHTML;
+        }
+      }
+      lastData = text;
+
+      // 3. Show the real update time
+      lastUpdated.textContent = "Last updated " +
+        new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    } catch (err) {
+      lastUpdated.textContent = "No connection - retrying...";
+      console.warn("Could not refresh status", err);
+    }
+  }
+
+  refreshStatus();                    // run once right away
+  setInterval(refreshStatus, 10000);  // then every 10 seconds
+</script>
 {% endblock %}

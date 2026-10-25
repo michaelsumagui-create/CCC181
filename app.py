@@ -1,4 +1,4 @@
-"""CCC181 Week 2: a "Hello, Flask" starter app.
+"""CCC181 Week 2: RegisTrak starter app
 
 Run it with:
     flask --app app run --debug
@@ -90,6 +90,26 @@ def ticket(ticket_id):
 
     service = next(s for s in SERVICES if s["id"] == t["service_id"])
     return render_template("ticket.html", ticket=t, service=service, ahead=len(ahead))
+
+
+@app.get("/queue/<int:ticket_id>/status.json")
+def ticket_status(ticket_id):
+    t = next((t for t in TICKETS if t["number"] == ticket_id), None)
+    if t is None:
+        abort(404)
+
+    ahead = sum(1 for x in TICKETS
+                if x["service_id"] == t["service_id"]
+                and x["status"] == "waiting" and x["number"] < t["number"])
+
+    # Who is being served now (so the "Now serving" box can update too)
+    serving = next((x for x in TICKETS if x["status"] == "called"), None)
+
+    return {
+        "status": t["status"],
+        "ahead": ahead,
+        "now_serving": serving["number"] if serving else None,
+    }
 
 
 @app.post("/queue/<int:ticket_id>/leave")
