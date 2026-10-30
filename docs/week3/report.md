@@ -15,7 +15,7 @@
 Full details: [personas.md](personas.md)
 
 **Gon, the student waiting** (22, 4th-year Computer Science student)
-- Quote: "There's no need to line up. I can wait or pay in the cashier while virtually lining up in registrar..." (paste the full quote from personas.md)
+- Quote: "There's no need to line up. I can wait or pay in the cashier while virtually lining up in registrar"
 - Top tasks: join a queue (FR-01), check queue number and status (FR-02), get a notification when the turn is near (FR-03).
 
 **Killua, the registrar staff member** (MSU-IIT registrar office)
