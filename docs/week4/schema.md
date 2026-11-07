@@ -12,7 +12,7 @@ Only requirements with **Stores data? = Yes** are listed. Nouns are in **bold**.
 | FR-04 | A staff member can see the active **queue** (waiting and called **tickets**) in order. | queue, tickets, order | *(queue is not a table)*, tickets, tickets.created_at |
 | FR-05 | A staff member can call the next waiting **ticket**, for all services or for one service. | ticket, service, time called | tickets, services, tickets.called_at |
 | FR-06 | A staff member can mark a called ticket as **served** or **no-show**. | status, time finished | tickets.status, tickets.finished_at |
-| FR-07 | A student can **leave** the queue after joining. | status | tickets.status |
+| FR-07 | A student can **leave** the queue after joining. | status | tickets.status (left) |
 | FR-09 | The app accepts only a **Student ID** in the form 2023-0001, and a student already waiting gets their existing ticket instead of a second one. | Student ID, ticket | students.id_number, tickets |
 | FR-11 | A staff member can add, **rename** and **switch off** a **service**. | service, name, active | services, services.name, services.is_active |
 | FR-12 | A staff member can see **completed tickets** (served and no-show) in a separate list. | completed tickets, status | tickets.status |
@@ -52,10 +52,14 @@ I did not add a `staff` table because staff login comes in a later week. I also 
 | tickets | id | integer, generated | PRIMARY KEY | This is the ticket number. The database gives each one a new number, so two students can never share one |
 | tickets | student_id | integer | NOT NULL FOREIGN KEY REFERENCES students(id) | No ticket for a missing student |
 | tickets | service_id | integer | NOT NULL FOREIGN KEY REFERENCES services(id) | No ticket for a missing service |
-| tickets | status | varchar(20) | NOT NULL DEFAULT 'waiting', CHECK (status IN ('waiting', 'called', 'served', 'no-show')) | Only the four statuses my app uses |
+| tickets | status | varchar(20) | NOT NULL DEFAULT 'waiting', CHECK (status IN ('waiting', 'called', 'served', 'no-show', 'left')) | Only the five statuses my app uses. `left` means the student left the queue, and `no-show` means they did not come when called |
 | tickets | created_at | timestamptz | NOT NULL DEFAULT now() | Time zone safe, set by the database, decides who is first |
 | tickets | called_at | timestamptz | NULL allowed | Empty until staff call the ticket |
-| tickets | finished_at | timestamptz | NULL allowed | Empty until the ticket is served or marked no-show |
+| tickets | finished_at | timestamptz | NULL allowed | Empty until the ticket is served, marked no-show or left |
+
+**Rule for FR-09:** a student can have only one ticket that is `waiting` or `called` at a time. The database enforces this with a partial unique index on `tickets(student_id)` that applies only when status is `waiting` or `called`. Served, no-show and left tickets are not counted, so a student can join again later.
+
+**Rule for the name:** the Student ID identifies the student. When someone joins, the app looks up the Student ID. If it exists, the stored name is updated to the latest one typed. If it doesn't, a new student is created.
 
 ## 2d. ERD
 
