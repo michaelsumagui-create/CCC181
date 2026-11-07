@@ -7,19 +7,22 @@
 
 <div class="row g-4">
 
+  <!-- LEFT: Call next + Now serving + stats -->
   <div class="col-12 col-lg-5">
 
+    <!-- Call next: the biggest button, top-left -->
     <form method="post" action="{{ url_for('call_next') }}" class="mb-4">
       <input type="hidden" name="service_id" value="{{ selected or '' }}">
       <button type="submit" class="btn btn-dark btn-lg w-100 py-4 fs-2">Call next</button>
     </form>
 
+    <!-- Now serving -->
     <div class="card border-2 border-dark mb-4">
       <div class="card-body">
         <p class="small text-uppercase text-body-secondary mb-1">Now serving</p>
         {% if now_serving %}
           <div class="display-3 fw-bold">R-{{ "%03d"|format(now_serving.id) }}</div>
-          <p class="mb-3">{{ now_serving.student.name }} &middot; {{ names[now_serving.service_id] }}</p>
+          <p class="mb-3">{{ now_serving.student.name }} &middot; {{ now_serving.service.name }}</p>
 
           <form method="post"
                 action="{{ url_for('staff_action', ticket_id=now_serving.id, action='serve') }}"
@@ -40,6 +43,7 @@
       </div>
     </div>
 
+    <!-- Stats + ★ waiting per service -->
     <div class="row g-2 text-center">
       <div class="col-6">
         <div class="border rounded p-2">
@@ -68,6 +72,7 @@
     </div>
   </div>
 
+  <!-- RIGHT: filter + active queue -->
   <div class="col-12 col-lg-7">
 
     <form method="get" action="{{ url_for('staff_dashboard') }}" class="row g-2 mb-3">
@@ -94,6 +99,7 @@
               <th scope="col">Ticket</th>
               <th scope="col">Name</th>
               <th scope="col">Service</th>
+              <th scope="col">Joined</th>
               <th scope="col">Status</th>
               <th scope="col">Actions</th>
             </tr>
@@ -103,7 +109,8 @@
               <tr {% if t.status == "called" %}class="table-success"{% endif %}>
                 <th scope="row">R-{{ "%03d"|format(t.id) }}</th>
                 <td>{{ t.student.name }}</td>
-                <td>{{ names[t.service_id] }}</td>
+                <td>{{ t.service.name }}</td>
+                <td class="text-nowrap">{{ t.created_at|local }}</td>
                 <td>
                   {% if t.status == "called" %}
                     <span class="badge text-bg-success">Called</span>
@@ -144,9 +151,10 @@
       </div>
     {% endif %}
 
+    <!-- Finished tickets: grey, but still visible -->
     {% if done %}
       <div class="table-responsive mt-4">
-        <table class="table table-sm table-secondary text-body-secondary">
+        <table class="table table-sm table-secondary">
           <caption class="caption-top">Completed requests</caption>
           <thead>
             <tr>
@@ -161,8 +169,8 @@
               <tr>
                 <th scope="row">R-{{ "%03d"|format(t.id) }}</th>
                 <td>{{ t.student.name }}</td>
-                <td>{{ names[t.service_id] }}</td>
-                <td>{{ "Served" if t.status == "served" else "No-show" }}</td>
+                <td>{{ t.service.name }}</td>
+                <td>{{ {"served": "Served", "no-show": "No-show", "left": "Left"}[t.status] }}</td>
               </tr>
             {% endfor %}
           </tbody>

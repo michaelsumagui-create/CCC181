@@ -6,6 +6,7 @@ then open http://127.0.0.1:5000
 """
 import os
 import re
+from datetime import timedelta, timezone
  
 from dotenv import load_dotenv
 from flask import Flask, abort, flash, redirect, render_template, request, url_for
@@ -34,6 +35,31 @@ def ordinal(n):
     else:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
     return f"{n}{suffix}"
+
+
+PH_TIME = timezone(timedelta(hours=8))  # Philippine time has no daylight saving
+
+
+@app.template_filter("local")
+def local_time(value):
+    """Show a database time in Philippine time, e.g. Nov 07, 08:01 AM."""
+    return value.astimezone(PH_TIME).strftime("%b %d, %I:%M %p") if value else ""
+
+
+def people_ahead(t):
+    """Count tickets still waiting that joined before t (one line for the whole office)."""
+    stmt = (db.select(func.count())
+            .select_from(Ticket)
+            .where(Ticket.status == "waiting",
+                   Ticket.created_at < t.created_at))
+    return db.session.scalar(stmt)
+
+
+def current_called():
+    """The ticket being served right now, or None."""
+    return db.session.scalar(
+        db.select(Ticket).where(Ticket.status == "called").order_by(Ticket.id)
+    )
 
 
 @app.route("/")
@@ -113,35 +139,23 @@ def join():
 
 @app.get("/queue/<int:ticket_id>")
 def ticket(ticket_id):
-    # Find the ticket, or show a 404 page if it doesn't exist
-    t = next((t for t in TICKETS if t["number"] == ticket_id), None)
-    if t is None:
-        abort(404)
+    t = db.get_or_404(Ticket, ticket_id)
+    ahead = people_ahead(t)
 
-    # People still waiting ahead of you, for the same service
-    ahead = [x for x in TICKETS
-             if x["service_id"] == t["service_id"]
-             and x["status"] == "waiting"
-             and x["number"] < t["number"]]
-
-    service = next(s for s in SERVICES if s["id"] == t["service_id"])
-
-    # Who is being served right now
-    now_serving = next((x for x in TICKETS if x["status"] == "called"), None)
-
-    # If nobody is called, show the most recently served ticket instead
+    now_serving = current_called()
     last_served = None
-    if not now_serving:
-        served = [x for x in TICKETS if x["status"] == "served"]
-        last_served = max(served, key=lambda x: x["number"]) if served else None
+    if now_serving is None:
+        last_served = db.session.scalar(
+            db.select(Ticket).where(Ticket.status == "served").order_by(Ticket.id.desc())
+        )
 
     return render_template(
         "ticket.html",
         ticket=t,
-        service=service,
-        ahead=len(ahead),
-        position=ordinal(len(ahead) + 1),
-        wait=len(ahead) * 4,          # rough guess: 4 minutes per person
+        service=t.service,
+        ahead=ahead,
+        position=ordinal(ahead + 1),
+        wait=ahead * 4,          # rough guess: 4 minutes per person
         now_serving=now_serving,
         last_served=last_served,
     )
@@ -149,21 +163,12 @@ def ticket(ticket_id):
 
 @app.get("/queue/<int:ticket_id>/status.json")
 def ticket_status(ticket_id):
-    t = next((t for t in TICKETS if t["number"] == ticket_id), None)
-    if t is None:
-        abort(404)
-
-    ahead = sum(1 for x in TICKETS
-                if x["service_id"] == t["service_id"]
-                and x["status"] == "waiting" and x["number"] < t["number"])
-
-    # Who is being served now (so the "Now serving" box can update too)
-    serving = next((x for x in TICKETS if x["status"] == "called"), None)
-
+    t = db.get_or_404(Ticket, ticket_id)
+    serving = current_called()
     return {
-        "status": t["status"],
-        "ahead": ahead,
-        "now_serving": serving["number"] if serving else None,
+        "status": t.status,
+        "ahead": people_ahead(t),
+        "now_serving": serving.id if serving else None,
     }
 
 
@@ -186,38 +191,43 @@ def leave(ticket_id):
 def staff_dashboard():
     service_id = request.args.get("service_id", type=int)
 
-    # show one service only
-    tickets = TICKETS
-    if service_id:
-        tickets = [t for t in TICKETS if t["service_id"] == service_id]
+    def only_this_service(stmt):
+        return stmt.where(Ticket.service_id == service_id) if service_id else stmt
 
-    queue = sorted(
-        [t for t in tickets if t["status"] in ("waiting", "called")],
-        key=lambda t: t["number"],
-    )
-    done = [t for t in tickets if t["status"] in ("served", "no-show")]
+    # Waiting and called tickets, in the order they joined
+    queue = db.session.scalars(only_this_service(
+        db.select(Ticket)
+        .where(Ticket.status.in_(["waiting", "called"]))
+        .order_by(Ticket.created_at)
+    )).all()
 
-    now_serving = next((t for t in queue if t["status"] == "called"), None)
+    # Finished tickets stay visible (shown in grey)
+    done = db.session.scalars(only_this_service(
+        db.select(Ticket)
+        .where(Ticket.status.in_(["served", "no-show", "left"]))
+        .order_by(Ticket.id.desc())
+    )).all()
 
-    names = {s["id"]: s["name"] for s in SERVICES}
+    now_serving = next((t for t in queue if t.status == "called"), None)
 
-    waiting_per_service = {
-        s["id"]: sum(1 for t in TICKETS
-                     if t["service_id"] == s["id"] and t["status"] == "waiting")
-        for s in SERVICES
-    }
+    # ★ How many are waiting for each service
+    counts = dict(db.session.execute(
+        db.select(Ticket.service_id, func.count())
+        .where(Ticket.status == "waiting")
+        .group_by(Ticket.service_id)
+    ).all())
+    services = db.session.scalars(db.select(Service).order_by(Service.name)).all()
 
     return render_template(
         "staff.html",
         queue=queue,
         done=done,
         now_serving=now_serving,
-        services=SERVICES,
-        names=names,
+        services=services,
         selected=service_id,
-        waiting_per_service=waiting_per_service,
-        waiting_count=sum(1 for t in queue if t["status"] == "waiting"),
-        served_count=sum(1 for t in done if t["status"] == "served"),
+        waiting_per_service={s.id: counts.get(s.id, 0) for s in services},
+        waiting_count=sum(1 for t in queue if t.status == "waiting"),
+        served_count=sum(1 for t in done if t.status == "served"),
     )
 
 
