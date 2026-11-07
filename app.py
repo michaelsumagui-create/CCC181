@@ -247,6 +247,22 @@ def hello():
     return "Hello RegisTrak!"
 
 
+@app.cli.command("seed")
+def seed():
+    """Add the starting services if they are not there yet."""
+    starting = [
+        "Transcript of Records",
+        "Certificate of Enrollment",
+        "Enrollment / Change of Subjects",
+    ]
+    for name in starting:
+        exists = db.session.scalar(db.select(Service).filter_by(name=name))
+        if exists is None:
+            db.session.add(Service(name=name))
+    db.session.commit()
+    print("Services are ready.")
+
+
 if __name__ == "__main__":
     # Lets you also start the app with: python app.py
     app.run(debug=True)
