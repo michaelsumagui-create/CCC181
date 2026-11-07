@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Ticket #{{ ticket.number }} · RegisTrak{% endblock %}
+{% block title %}Ticket #{{ ticket.id }} · RegisTrak{% endblock %}
 
 {% block content %}
 <div class="row g-4">
@@ -11,7 +11,7 @@
     <div class="card border-2 border-dark text-center">
       <div class="card-body py-4">
         <h1 class="h6 text-body-secondary mb-0">Your ticket</h1>
-        <div class="display-1 fw-bold">R-{{ "%03d"|format(ticket.number) }}</div>
+        <div class="display-1 fw-bold">R-{{ "%03d"|format(ticket.id) }}</div>
       </div>
     </div>
 
@@ -74,9 +74,9 @@
         <p class="small text-uppercase text-body-secondary mb-1">Now serving</p>
         <p class="h4 mb-3">
           {% if now_serving %}
-            R-{{ "%03d"|format(now_serving.number) }}
+            R-{{ "%03d"|format(now_serving.id) }}
           {% elif last_served %}
-            Last served: R-{{ "%03d"|format(last_served.number) }}
+            Last served: R-{{ "%03d"|format(last_served.id) }}
           {% else %}
             Waiting for staff to call the first ticket
           {% endif %}
@@ -86,10 +86,10 @@
         <p class="mb-3">{{ service.name }}</p>
 
         <p class="small text-uppercase text-body-secondary mb-1">Name</p>
-        <p class="mb-0">{{ ticket.name }} ({{ ticket.id_number }})</p>
+        <p class="mb-0">{{ ticket.student.name }} ({{ ticket.student.id_number }})</p>
 
         {% if ticket.status in ["waiting", "called"] %}
-          <form method="post" action="{{ url_for('leave', ticket_id=ticket.number) }}"
+          <form method="post" action="{{ url_for('leave', ticket_id=ticket.id) }}"
                 class="mt-4"
                 onsubmit="return confirm('Leave the queue? You will lose your place.');">
             <button type="submit" class="btn btn-outline-dark btn-lg w-100">Leave queue</button>
@@ -104,8 +104,8 @@
 
 {% block scripts %}
 <script>
-  const statusUrl = "{{ url_for('ticket_status', ticket_id=ticket.number) }}";
-  const pageUrl = "{{ url_for('ticket', ticket_id=ticket.number) }}";
+  const statusUrl = "{{ url_for('ticket_status', ticket_id=ticket.id) }}";
+  const pageUrl = "{{ url_for('ticket', ticket_id=ticket.id) }}";
   const lastUpdated = document.getElementById("last-updated");
   let lastData = null;
 

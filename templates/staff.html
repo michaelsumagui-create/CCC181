@@ -18,21 +18,21 @@
       <div class="card-body">
         <p class="small text-uppercase text-body-secondary mb-1">Now serving</p>
         {% if now_serving %}
-          <div class="display-3 fw-bold">R-{{ "%03d"|format(now_serving.number) }}</div>
-          <p class="mb-3">{{ now_serving.name }} &middot; {{ names[now_serving.service_id] }}</p>
+          <div class="display-3 fw-bold">R-{{ "%03d"|format(now_serving.id) }}</div>
+          <p class="mb-3">{{ now_serving.student.name }} &middot; {{ names[now_serving.service_id] }}</p>
 
           <form method="post"
-                action="{{ url_for('staff_action', ticket_id=now_serving.number, action='serve') }}"
+                action="{{ url_for('staff_action', ticket_id=now_serving.id, action='serve') }}"
                 class="mb-2">
             <button type="submit" class="btn btn-dark w-100"
-                    aria-label="Mark ticket {{ now_serving.number }} as served">Mark served</button>
+                    aria-label="Mark ticket {{ now_serving.id }} as served">Mark served</button>
           </form>
 
           <form method="post"
-                action="{{ url_for('staff_action', ticket_id=now_serving.number, action='no-show') }}"
+                action="{{ url_for('staff_action', ticket_id=now_serving.id, action='no-show') }}"
                 onsubmit="return confirm('Mark this ticket as no-show?');">
             <button type="submit" class="btn btn-outline-dark w-100"
-                    aria-label="Skip ticket {{ now_serving.number }} as no-show">Skip / no-show</button>
+                    aria-label="Skip ticket {{ now_serving.id }} as no-show">Skip / no-show</button>
           </form>
         {% else %}
           <p class="fs-5 mb-0">No one is being served. Press <strong>Call next</strong>.</p>
@@ -101,8 +101,8 @@
           <tbody>
             {% for t in queue %}
               <tr {% if t.status == "called" %}class="table-success"{% endif %}>
-                <th scope="row">R-{{ "%03d"|format(t.number) }}</th>
-                <td>{{ t.name }}</td>
+                <th scope="row">R-{{ "%03d"|format(t.id) }}</th>
+                <td>{{ t.student.name }}</td>
                 <td>{{ names[t.service_id] }}</td>
                 <td>
                   {% if t.status == "called" %}
@@ -114,22 +114,22 @@
                 <td class="text-nowrap">
                   {% if t.status == "waiting" %}
                     <form method="post" class="d-inline"
-                          action="{{ url_for('staff_action', ticket_id=t.number, action='call') }}">
+                          action="{{ url_for('staff_action', ticket_id=t.id, action='call') }}">
                       <button class="btn btn-sm btn-primary"
-                              aria-label="Call ticket {{ t.number }}">Call</button>
+                              aria-label="Call ticket {{ t.id }}">Call</button>
                     </form>
                   {% else %}
                     <form method="post" class="d-inline"
-                          action="{{ url_for('staff_action', ticket_id=t.number, action='serve') }}">
+                          action="{{ url_for('staff_action', ticket_id=t.id, action='serve') }}">
                       <button class="btn btn-sm btn-success"
-                              aria-label="Mark ticket {{ t.number }} as served">Serve</button>
+                              aria-label="Mark ticket {{ t.id }} as served">Serve</button>
                     </form>
                   {% endif %}
                   <form method="post" class="d-inline"
-                        action="{{ url_for('staff_action', ticket_id=t.number, action='no-show') }}"
+                        action="{{ url_for('staff_action', ticket_id=t.id, action='no-show') }}"
                         onsubmit="return confirm('Mark this ticket as no-show?');">
                     <button class="btn btn-sm btn-outline-danger"
-                            aria-label="Mark ticket {{ t.number }} as no-show">No-show</button>
+                            aria-label="Mark ticket {{ t.id }} as no-show">No-show</button>
                   </form>
                 </td>
               </tr>
@@ -159,8 +159,8 @@
           <tbody>
             {% for t in done %}
               <tr>
-                <th scope="row">R-{{ "%03d"|format(t.number) }}</th>
-                <td>{{ t.name }}</td>
+                <th scope="row">R-{{ "%03d"|format(t.id) }}</th>
+                <td>{{ t.student.name }}</td>
                 <td>{{ names[t.service_id] }}</td>
                 <td>{{ "Served" if t.status == "served" else "No-show" }}</td>
               </tr>

@@ -25,19 +25,6 @@ app.config["SQLALCHEMY_ECHO"] = os.environ.get("SQLALCHEMY_ECHO") == "1"
 db.init_app(app)
 migrate = Migrate(app, db)
 
-SERVICES = [
-    {"id": 1, "name": "Transcript of Records"},
-    {"id": 2, "name": "Certificate of Enrollment"},
-    {"id": 3, "name": "Enrollment / Change of Subjects"},
-]
-
-# Each ticket: number, name, id_number, service_id, status
-# status is one of: waiting, called, served, no-show
-TICKETS = [
-    {"number": 1, "name": "Joshua Kenezo", "id_number": "2023-0001", "service_id": 1, "status": "waiting"},
-    {"number": 2, "name": "Shasheenah Lumasag", "id_number": "2023-0002", "service_id": 2, "status": "waiting"},
-    {"number": 3, "name": "Joash Casino", "id_number": "2023-0003", "service_id": 1, "status": "waiting"},
-]
 
 
 def ordinal(n):
@@ -54,10 +41,16 @@ def index():
     return render_template("index.html")
 
 
+def all_services():
+    """Services that are switched on, for the join form."""
+    return db.session.scalars(
+        db.select(Service).where(Service.is_active.is_(True)).order_by(Service.name)
+    ).all()
+
+
 @app.get("/join")
 def join_form():
-    # Show an empty form
-    return render_template("join.html", services=SERVICES, form={}, errors={})
+    return render_template("join.html", services=all_services(), form={}, errors={})
 
 
 @app.post("/join")
@@ -67,36 +60,55 @@ def join():
     id_number = form.get("id_number", "").strip()
     service_id = form.get("service_id", type=int)
 
+    # The service must exist in the database and be switched on
+    service = db.session.get(Service, service_id) if service_id else None
+    if service is not None and not service.is_active:
+        service = None
+
     errors = {}
-    if not name:
-        errors["name"] = "Please enter your name."
+    if not name or len(name) > 100:
+        errors["name"] = "Please enter your name (up to 100 characters)."
     if not id_number:
         errors["id_number"] = "Please enter your Student ID."
-    elif not re.fullmatch(r"\d{4}-\d{4}", id_number):
+    elif not re.fullmatch(r"[0-9]{4}-[0-9]{4}", id_number):
         errors["id_number"] = "Student ID should look like 2023-0001."
-    if service_id not in [s["id"] for s in SERVICES]:
+    if service is None:
         errors["service_id"] = "Please choose a service."
 
     if errors:
         flash("Please fix the highlighted fields.", "danger")
-        return render_template("join.html", services=SERVICES, form=form, errors=errors), 400
+        return render_template("join.html", services=all_services(),
+                               form=form, errors=errors), 400
 
-    # Already in the queue? Send them to their existing ticket
-    for t in TICKETS:
-        if t["id_number"] == id_number and t["status"] in ("waiting", "called"):
-            flash(f"You're already in the queue. Your ticket is R-{t['number']:03d}.", "info")
-            return redirect(url_for("ticket", ticket_id=t["number"]))
+    # Find the student by Student ID
+    student = db.session.scalar(db.select(Student).filter_by(id_number=id_number))
+    if student is not None:
+        # Already waiting or called? Send them to that ticket
+        active = db.session.scalar(
+            db.select(Ticket).where(
+                Ticket.student_id == student.id,
+                Ticket.status.in_(("waiting", "called")),
+            )
+        )
+        if active is not None:
+            flash(f"You're already in the queue. Your ticket is R-{active.id:03d}.", "info")
+            return redirect(url_for("ticket", ticket_id=active.id))
+        student.name = name  # the latest name typed wins
+    else:
+        student = Student(id_number=id_number, name=name)
 
-    number = TICKETS[-1]["number"] + 1 if TICKETS else 1
-    TICKETS.append({
-        "number": number,
-        "name": name,
-        "id_number": id_number,
-        "service_id": service_id,
-        "status": "waiting",
-    })
-    flash(f"You joined the queue. Your ticket is R-{number:03d}.", "success")
-    return redirect(url_for("ticket", ticket_id=number))
+    ticket = Ticket(student=student, service=service)
+    db.session.add(ticket)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("Something went wrong saving your ticket. Please try again.", "danger")
+        return render_template("join.html", services=all_services(),
+                               form=form, errors={}), 409
+
+    flash(f"You joined the queue. Your ticket is R-{ticket.id:03d}.", "success")
+    return redirect(url_for("ticket", ticket_id=ticket.id))
 
 
 @app.get("/queue/<int:ticket_id>")
