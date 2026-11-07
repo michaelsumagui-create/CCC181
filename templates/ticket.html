@@ -95,7 +95,7 @@
         <p class="small text-uppercase text-body-secondary mb-1">Joined</p>
         <p class="mb-0">{{ ticket.created_at|local }}</p>
 
-        {% if ticket.status in ["waiting", "called"] %}
+        {% if ticket.status == "waiting" %}
           <form method="post" action="{{ url_for('leave', ticket_id=ticket.id) }}"
                 class="mt-4"
                 onsubmit="return confirm('Leave the queue? You will lose your place.');">

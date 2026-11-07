@@ -3,7 +3,10 @@
 {% block title %}Queue dashboard · RegisTrak{% endblock %}
 
 {% block content %}
-<h1 class="h3 mb-4">RegisTrak Staff</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <h1 class="h3 mb-0">RegisTrak Staff</h1>
+  <a class="btn btn-outline-dark" href="{{ url_for('services_list') }}">Manage services</a>
+</div>
 
 <div class="row g-4">
 
@@ -138,6 +141,12 @@
                     <button class="btn btn-sm btn-outline-danger"
                             aria-label="Mark ticket {{ t.id }} as no-show">No-show</button>
                   </form>
+                  <form method="post" class="d-inline"
+                        action="{{ url_for('delete_ticket', ticket_id=t.id) }}"
+                        data-confirm="Delete ticket R-{{ '%03d'|format(t.id) }}? This cannot be undone.">
+                    <button class="btn btn-sm btn-outline-secondary"
+                            aria-label="Delete ticket {{ t.id }}">Delete</button>
+                  </form>
                 </td>
               </tr>
             {% endfor %}
@@ -162,6 +171,7 @@
               <th scope="col">Name</th>
               <th scope="col">Service</th>
               <th scope="col">Status</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -171,6 +181,14 @@
                 <td>{{ t.student.name }}</td>
                 <td>{{ t.service.name }}</td>
                 <td>{{ {"served": "Served", "no-show": "No-show", "left": "Left"}[t.status] }}</td>
+                <td>
+                  <form method="post" class="d-inline"
+                        action="{{ url_for('delete_ticket', ticket_id=t.id) }}"
+                        data-confirm="Delete ticket R-{{ '%03d'|format(t.id) }}? This cannot be undone.">
+                    <button class="btn btn-sm btn-outline-danger"
+                            aria-label="Delete ticket {{ t.id }}">Delete</button>
+                  </form>
+                </td>
               </tr>
             {% endfor %}
           </tbody>

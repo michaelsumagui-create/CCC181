@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Manage services · RegisTrak{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Manage services</h1>
+  <a class="btn btn-outline-dark" href="{{ url_for('staff_dashboard') }}">Back to dashboard</a>
+</div>
+
+<form method="post" action="{{ url_for('service_create') }}" class="row g-2 mb-4">
+  <div class="col-12 col-md-8">
+    <label for="new-name" class="visually-hidden">New service name</label>
+    <input id="new-name" name="name" class="form-control" maxlength="80"
+           placeholder="New service name" required>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-dark">Add service</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <caption class="caption-top">All services</caption>
+    <thead>
+      <tr>
+        <th scope="col">Name, active, save</th>
+        <th scope="col">Tickets</th>
+        <th scope="col">Delete</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in services %}
+        <tr {% if not s.active %}class="table-secondary"{% endif %}>
+          <td>
+            <form method="post" action="{{ url_for('service_edit', service_id=s.id) }}"
+                  class="d-flex flex-wrap gap-2 align-items-center">
+              <label for="name-{{ s.id }}" class="visually-hidden">Name</label>
+              <input id="name-{{ s.id }}" name="name" value="{{ s.name }}"
+                     class="form-control w-auto flex-grow-1" maxlength="80" required>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="active"
+                       id="active-{{ s.id }}" {% if s.active %}checked{% endif %}>
+                <label class="form-check-label" for="active-{{ s.id }}">Active</label>
+              </div>
+              <button type="submit" class="btn btn-sm btn-outline-dark">Save</button>
+            </form>
+          </td>
+          <td>{{ s.tickets|length }}</td>
+          <td>
+            <form method="post" action="{{ url_for('service_delete', service_id=s.id) }}"
+                  data-confirm="Delete “{{ s.name }}”? This cannot be undone.">
+              <button type="submit" class="btn btn-sm btn-outline-danger"
+                      aria-label="Delete {{ s.name }}">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
