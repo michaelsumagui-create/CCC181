@@ -7,8 +7,8 @@
 - **Full name:** Michael S. Sumagui
 - **Student ID:** 2023-3802
 - **Section:** CS3B
-- **Date:** __
-- **Pull request:** __ (paste the link)
+- **Date:** November 11, 2026
+- **Pull request:** [#3](https://github.com/michaelsumagui-create/CCC181/pull/3)
 - **Database:** PostgreSQL 17 in Docker Compose
 
 ## 2. Requirements
@@ -147,8 +147,8 @@ Services also have create, update, switch off and delete (FR-11) on `/staff/serv
 
 Full notes: [validation.md](validation.md)
 
-- **Summary:** __ (one or two sentences on the checks that stop bad data: the Student ID format, the status CHECK, the unique constraints and the foreign keys)
-- **Most useful PostgreSQL error:** __ (paste the error and say what it taught you)
+- **Summary:** I tested each rule at three layers. The browser stops simple mistakes, such as a name longer than 100 characters. When I skipped the form with `curl`, Flask still rejected bad input with `400 BAD REQUEST` and saved nothing. When I skipped Flask and typed SQL in psql, PostgreSQL rejected bad data with its own constraints (FOREIGN KEY, CHECK, UNIQUE, NOT NULL, column length and ON DELETE RESTRICT). I also found no SQL built from f-strings, because all queries use SQLAlchemy.
+- **Most useful PostgreSQL error:** `ERROR: duplicate key value violates unique constraint "uq_tickets_one_active_per_student"`. It showed that the database itself enforces FR-09, so a student cannot have two waiting or called tickets even if my Python check fails, for example when someone double-taps Join. This is the problem my schema self-review found, and the partial unique index fixed it.
 
 ## 10. Persistence
 
@@ -157,15 +157,17 @@ Full steps: [persistence.md](persistence.md)
 ![Dashboard before restart](screenshots/before-restart-dashboard.png)
 ![Dashboard after restart](screenshots/after-restart-dashboard.png)
 
-- **Restart test:** __ (every ticket, status and time was the same after `docker compose down` and `up -d`)
-- **Rebuild from scratch:** __ (the app opened from the migrations and the seed command alone)
-- **NFR-01 (no ticket lost on restart):** __ (Passed / Failed)
+- **Restart test:** Every ticket, status and time was the same after `docker compose down` and `up -d`
+- **Rebuild from scratch:** The app opened from the migrations and the seed command alone
+- **NFR-01 (no ticket lost on restart):** Passed
 
 ## 11. Reflection
 
-- **Hardest part this week:** __
-- **Requirement hardest to write in a testable way:** __
-- **A report my staff persona would want:** Killua would want to know how many people left before being served, per service, per day. I will write that query in Week 5.
+**Hardest part this week:** The hardest part was migrations. My model said `active`, but my first migration had created `is_active`. When I ran `db migrate`, Alembic did not see a rename. It wrote a script that added a new column and dropped the old one, which would have switched every service back on and lost the data in that column. I fixed it by rewriting the migration as one `alter_column` rename. I also found that my model had an index that no migration had created, so my models and my database disagreed. I learned that I must always open and read an auto-generated migration before running it, and that the database has to match the models after every change.
+
+**Requirement hardest to write in a testable way:** NFR-01, "no ticket is lost when the app restarts." At first it was too vague to check. I had to turn it into a test I could repeat: create tickets in different states, run `docker compose down` and `up`, and compare the same SQL query before and after. Only then could I say whether it passed or failed.
+
+**A report my staff persona would want from this data:** How many people left the queue before being served, per service, per day. The registrar could use it to see which services have the longest waits, and when to open another counter. The data is already in the database. Leaving the queue is a soft delete, so `tickets` keeps those rows with `status = 'left'`, together with `created_at` and `service_id`.
 
 ## 12. Declaration
 
